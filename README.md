@@ -23,6 +23,10 @@ Pull the image from the Docker repository.
 
 ## Build
 
+## NOTE
+
+Please edit scripts/entrypoint.sh file and add bucket name which you want to mount in first line before you build your image 
+
 Optionally install [Extra Airflow Packages](https://airflow.incubator.apache.org/installation.html#extra-package) and/or python dependencies at build time :
 
     docker build --rm --build-arg AIRFLOW_DEPS="datadog,dask" -t puckel/docker-airflow .
