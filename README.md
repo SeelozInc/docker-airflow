@@ -46,6 +46,14 @@ By default, docker-airflow runs Airflow with **SequentialExecutor** :
 
 If you want to run another executor, use the other docker-compose.yml files provided in this repository.
 
+For **GCP**:
+
+```
+docker run --privileged -d -p 8080:8080 -e GOOGLE_APPLICATION_CREDENTIALS=/home/<username>/cred.json -v $GOOGLE_APPLICATION_CREDENTIALS:/home/<username>/cred.json:ro gcr.io/<PROJECT-ID>/airflowgke:test webserver
+```
+
+
+
 For **LocalExecutor** :
 
     docker-compose -f docker-compose-LocalExecutor.yml up -d
