@@ -4,6 +4,9 @@
 #
 # Therefore, this script must only derives Airflow AIRFLOW__ variables from other variables
 # when the user did not provide their own configuration.
+# please provide bucket name before building image
+gcsfuse <bucket-name> /usr/local/airflow/airflow/
+
 
 TRY_LOOP="20"
 
