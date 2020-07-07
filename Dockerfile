@@ -12,8 +12,8 @@ ENV DEBIAN_FRONTEND noninteractive
 ENV TERM linux
 
 # Airflow
-ARG AIRFLOW_VERSION=1.10.9
-ARG AIRFLOW_USER_HOME=/usr/local/airflow
+ARG AIRFLOW_VERSION=1.10.10
+ARG AIRFLOW_USER_HOME=/usr/local/airflow/
 ARG AIRFLOW_DEPS=""
 ARG PYTHON_DEPS=""
 ENV AIRFLOW_HOME=${AIRFLOW_USER_HOME}
@@ -61,6 +61,7 @@ RUN set -ex \
     && pip install pyasn1 \
     && pip install apache-airflow[crypto,celery,postgres,hive,jdbc,mysql,ssh${AIRFLOW_DEPS:+,}${AIRFLOW_DEPS}]==${AIRFLOW_VERSION} \
     && pip install 'redis==3.2' \
+    && pip uninstall -y SQLAlchemy && pip install SQLAlchemy==1.3.16 \
     && if [ -n "${PYTHON_DEPS}" ]; then pip install ${PYTHON_DEPS}; fi \
     && apt-get purge --auto-remove -yqq $buildDeps \
     && apt-get autoremove -yqq --purge \
@@ -73,11 +74,31 @@ RUN set -ex \
         /usr/share/doc \
         /usr/share/doc-base
 
-COPY script/entrypoint.sh /entrypoint.sh
-COPY config/airflow.cfg ${AIRFLOW_USER_HOME}/airflow.cfg
+RUN apt-get update && apt-get install -y lsb-release && apt-get clean all
+RUN curl https://dl.google.com/dl/cloudsdk/release/google-cloud-sdk.tar.gz > /tmp/google-cloud-sdk.tar.gz
+
+# Installing the package
+RUN mkdir -p /usr/local/gcloud \
+&& tar -C /usr/local/gcloud -xvf /tmp/google-cloud-sdk.tar.gz \
+&& /usr/local/gcloud/google-cloud-sdk/install.sh
+
+
+# Adding the package path to local
+
+ENV PATH $PATH:/usr/local/gcloud/google-cloud-sdk/bin
+RUN apt-get update && apt-get install -y gnupg2
+RUN export GCSFUSE_REPO=gcsfuse-`lsb_release -c -s` && echo "deb http://packages.cloud.google.com/apt $GCSFUSE_REPO main" | tee /etc/apt/sources.list.d/gcsfuse.list 
+RUN curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+
+RUN apt-get update -y && apt-get install gcsfuse -y
+
+COPY ./key.json /gcp-key/key.json
+COPY ./script/entrypoint.sh /entrypoint.sh
+COPY ./config/airflow.cfg ${AIRFLOW_USER_HOME}/airflow.cfg
+RUN groupadd fuse && usermod -a -G fuse airflow && mkdir /usr/local/airflow/airflow && chown -R $USER:fuse /usr/local/airflow/airflow/ && chmod -R ug+rw /usr/local/airflow/airflow/ 
 
 RUN chown -R airflow: ${AIRFLOW_USER_HOME}
-
+RUN chmod +x /entrypoint.sh
 EXPOSE 8080 5555 8793
 
 USER airflow
